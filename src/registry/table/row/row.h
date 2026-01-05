@@ -11,7 +11,7 @@
 #include "../../types/registry_type.h"
 #include "../../value.h"
 
-#include "../../exceptions/column_not_found.h"
+#include "../../exceptions/database_access_exception.h"
 
 namespace iamaprogrammer {
   class Registry; // Forward Declaration
@@ -27,7 +27,7 @@ namespace iamaprogrammer {
 
       const Value operator[](std::string column) const {
         if (!this->schema->contains(column)) {
-          throw ColumnNotFoundException(column);
+          throw DatabaseAccessException("Could not find column: " + column);
         }
 
         int type = sqlite3_column_type(this->statement, this->schema->indexOf(column));

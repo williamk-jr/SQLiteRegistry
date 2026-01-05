@@ -4,9 +4,9 @@
 #include <string>
 
 namespace iamaprogrammer {
-  class ColumnNotFoundException: public std::exception {
+  class DatabaseAccessException: public std::exception {
     public:
-      ColumnNotFoundException(std::string columnName);
+      DatabaseAccessException(std::string reason);
 
       virtual const char* what() const throw();
     private:

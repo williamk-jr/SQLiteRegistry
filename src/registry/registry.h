@@ -13,8 +13,7 @@
 #include "table/table_iterator.h"
 #include "table/row/row_builder.h"
 
-#include "exceptions/database_open_failure.h"
-#include "exceptions/database_access_failure.h"
+#include "exceptions/database_access_exception.h"
 
 namespace iamaprogrammer {
 
@@ -35,6 +34,10 @@ namespace iamaprogrammer {
     Row getEntry(std::string table, std::string key);
     Row getEntry(std::string table, int key);
     Row getEntry(std::string table, double key);
+
+    bool hasEntry(std::string table, std::string key);
+    bool hasEntry(std::string table, int key);
+    bool hasEntry(std::string table, double key);
 
   private:
     sqlite3* db = nullptr;
