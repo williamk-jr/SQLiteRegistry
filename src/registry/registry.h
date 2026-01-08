@@ -7,6 +7,7 @@
 
 #include <sqlite3.h>
 
+#include "sql_safe_string.h"
 #include "types/registry_type.h"
 #include "table/table_builder.h"
 #include "table/table_schema.h"
@@ -23,26 +24,32 @@ namespace iamaprogrammer {
     Registry(std::filesystem::path databasePath);
     ~Registry();
 
-    void addTable(std::string name, TableSchema* schema);
-    TableIterator getTableIterator(std::string name);
-    void dropTable(const std::string& tableName);
+    void addTable(SqlSafeString name, TableSchema* schema);
+    TableIterator getTableIterator(SqlSafeString name);
+    void dropTable(SqlSafeString tableName);
 
-    RowBuilder addEntry(std::string table);
-    void dropEntry(std::string table, std::string key);
-    void dropEntry(std::string table, int key);
-    void dropEntry(std::string table, double key);
-    Row getEntry(std::string table, std::string key);
-    Row getEntry(std::string table, int key);
-    Row getEntry(std::string table, double key);
+    RowBuilder addEntry(SqlSafeString table);
+    
+    void dropEntry(SqlSafeString table, std::string key);
+    void dropEntry(SqlSafeString table, int key);
+    void dropEntry(SqlSafeString table, double key);
 
-    bool hasEntry(std::string table, std::string key);
-    bool hasEntry(std::string table, int key);
-    bool hasEntry(std::string table, double key);
+    Row getEntry(SqlSafeString table, std::string key);
+    Row getEntry(SqlSafeString table, int key);
+    Row getEntry(SqlSafeString table, double key);
+
+    bool hasEntry(SqlSafeString table, std::string key);
+    bool hasEntry(SqlSafeString table, int key);
+    bool hasEntry(SqlSafeString table, double key);
 
   private:
     sqlite3* db = nullptr;
     std::map<std::string, TableSchema*> schemas;
     const std::filesystem::path databasePath;
+
+    void prepare(const std::string& sql, sqlite3_stmt** stmt);
+    std::string getPrimaryColumn(SqlSafeString table);
+    void ensureDatabase();
     //std::vector<V> entries;
   };
 }

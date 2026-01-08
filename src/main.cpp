@@ -21,13 +21,11 @@ int main() {
 
   registry.addEntry("test_table")
     .value("test_id")
-    .value(67)
-    .finish();
+    .value(67);
 
   registry.addEntry("test_table")
     .value("test_id2")
-    .value(69)
-    .finish();
+    .value(69);
 
   iamaprogrammer::TableIterator iterator = registry.getTableIterator("test_table");
   

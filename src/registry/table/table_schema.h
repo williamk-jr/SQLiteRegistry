@@ -19,6 +19,8 @@ namespace iamaprogrammer {
       size_t indexOf(std::string columnName) const;
       bool contains(std::string columnName) const;
 
+      std::string toSql();
+
     private:
       const std::vector<std::pair<std::string, RegistryType>> columnTypes;
       const std::map<std::string, size_t> columnTypeMap;

@@ -12,6 +12,7 @@
 #include "../../value.h"
 
 #include "../../exceptions/database_access_exception.h"
+#include "../../sql_safe_string.h"
 
 namespace iamaprogrammer {
   class Registry; // Forward Declaration
@@ -48,9 +49,9 @@ namespace iamaprogrammer {
       sqlite3_stmt* statement = nullptr;
       bool hasOwnership = false;
 
-      Row(sqlite3* db, std::string table, std::string key, TableSchema* schema);
-      Row(sqlite3* db, std::string table, int key, TableSchema* schema);
-      Row(sqlite3* db, std::string table, double key, TableSchema* schema);
+      Row(sqlite3* db, SqlSafeString table, std::string key, TableSchema* schema);
+      Row(sqlite3* db, SqlSafeString table, int key, TableSchema* schema);
+      Row(sqlite3* db, SqlSafeString table, double key, TableSchema* schema);
       Row(sqlite3_stmt* statement, TableSchema* schema);
   };
 }

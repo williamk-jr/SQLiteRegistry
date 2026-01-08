@@ -9,6 +9,7 @@
 
 #include "table_schema.h"
 #include "../types/registry_type.h"
+#include "../sql_safe_string.h"
 #include "row/row.h"
 
 namespace iamaprogrammer {
@@ -30,6 +31,6 @@ namespace iamaprogrammer {
       sqlite3_stmt* statement = nullptr;
       int status = 0;
 
-      TableIterator(sqlite3* db, const std::string &tableName, TableSchema* schema);
+      TableIterator(sqlite3* db, SqlSafeString table, TableSchema* schema);
   };
 }

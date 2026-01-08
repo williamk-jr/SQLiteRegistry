@@ -23,4 +23,21 @@ namespace iamaprogrammer {
   size_t TableSchema::columnCount() {
     return this->columnTypes.size();
   }
+
+  std::string TableSchema::toSql() {
+    std::string columns = "";
+    for (int i = 0; i < this->columnCount(); i++) {
+      const std::pair<std::string, RegistryType>& columnSchema = this->get(i);
+      std::string column = columnSchema.first + " " + columnSchema.second.getSqlType();
+      if (i == 0) {
+        column += " PRIMARY KEY";
+      }
+
+      if (columns.empty()) {
+        columns += column;
+      } else {
+        columns += ", " + column;
+      }
+    }
+  }
 }

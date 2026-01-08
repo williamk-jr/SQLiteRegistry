@@ -15,162 +15,114 @@ namespace iamaprogrammer {
     sqlite3_close(this->db);
   }
 
-  void Registry::addTable(std::string name, TableSchema* schema) {
-    if (!this->db) {
-      throw DatabaseAccessException("Database does not exist.");
-    }
-
-    // Create SQL column descriptors.
-    std::string columns = "";
-    for (int i = 0; i < schema->columnCount(); i++) {
-      const std::pair<std::string, RegistryType>& columnSchema = schema->get(i);
-      std::string column = columnSchema.first + " " + columnSchema.second.getSqlType();
-      if (i == 0) {
-        column += " PRIMARY KEY";
-      }
-
-      if (columns.empty()) {
-        columns += column;
-      } else {
-        columns += ", " + column;
-      }
-    }
+  void Registry::addTable(SqlSafeString table, TableSchema* schema) {
+    this->ensureDatabase();
 
     // Preform SQLite table creation operation.
+    std::string sql = "CREATE TABLE IF NOT EXISTS " + table.toString() + " (" + schema->toSql() + ");";
     sqlite3_stmt* stmt;
+
     int err = 0;
-    err = sqlite3_prepare_v2(this->db, ("CREATE TABLE IF NOT EXISTS " + name + " (" + columns + ");").c_str(), -1, &stmt, nullptr);
-    err = sqlite3_bind_text(stmt, 1, name.c_str(), -1, SQLITE_STATIC);
+    err = sqlite3_prepare_v2(this->db, sql.c_str(), -1, &stmt, nullptr);
+    err = sqlite3_bind_text(stmt, 1, table.toString().c_str(), -1, SQLITE_STATIC);
     err = sqlite3_step(stmt);
     err = sqlite3_finalize(stmt);
 
-    this->schemas[name] = schema;
+    this->schemas[table.toString()] = schema;
   }
 
-  TableIterator Registry::getTableIterator(std::string name) {
-    return TableIterator(this->db, name, this->schemas[name]);
+  TableIterator Registry::getTableIterator(SqlSafeString table) {
+    return TableIterator(this->db, table, this->schemas[table.toString()]);
   }
 
-  void Registry::dropTable(const std::string& tableName) {
-    if (!this->db) {
-      throw DatabaseAccessException("Database does not exist.");
-    }
-    std::string sql = "DROP TABLE IF EXISTS \"" + tableName + "\";";
+  void Registry::dropTable(SqlSafeString table) {
+    this->ensureDatabase();
+
+    std::string sql = "DROP TABLE IF EXISTS \"" + table.toString() + "\";";
+
     sqlite3_stmt* stmt = nullptr;
-    char* err = nullptr;
-
-    if (sqlite3_prepare_v2(this->db, sql.c_str(), -1, &stmt, nullptr) != SQLITE_OK) {
-      throw DatabaseAccessException("Failed to drop table '" + tableName + "': " + (err ? err : "unknown"));
-    }
+    this->prepare(sql, &stmt);
 
     sqlite3_step(stmt);
     sqlite3_finalize(stmt);
 
-    if (this->schemas.find(tableName) != this->schemas.end()) {
-      this->schemas.erase(tableName);
+    if (this->schemas.find(table.toString()) != this->schemas.end()) {
+      this->schemas.erase(table.toString());
     }
   }
 
-  RowBuilder Registry::addEntry(std::string table) {
+  RowBuilder Registry::addEntry(SqlSafeString table) {
     return RowBuilder(this->db, table);
   }
 
-  void Registry::dropEntry(std::string table, std::string key) {
-    if (!this->db) {
-      throw DatabaseAccessException("Database does not exist.");
-    };
+  void Registry::dropEntry(SqlSafeString table, std::string key) {
+    this->ensureDatabase();
 
-    std::string pk = this->schemas.at(table)->get(0).first;
-    if (pk.empty()) {
-      throw DatabaseAccessException("No primary key found on table '" + table + "' — cannot delete by string key.");
-    }
+    std::string pk = this->getPrimaryColumn(table);
+    std::string sql = "DELETE FROM \"" + table.toString() + "\" WHERE \"" + pk + "\" = ?;";
 
-    std::string sql = "DELETE FROM \"" + table + "\" WHERE \"" + pk + "\" = ?;";
     sqlite3_stmt* stmt = nullptr;
-    if (sqlite3_prepare_v2(this->db, sql.c_str(), -1, &stmt, nullptr) != SQLITE_OK) {
-      throw DatabaseAccessException("Failed to prepare delete statement for table '" + table + "': " + sqlite3_errmsg(this->db));
-    }
+    this->prepare(sql, &stmt);
 
     sqlite3_bind_text(stmt, 1, key.c_str(), -1, SQLITE_TRANSIENT);
     if (sqlite3_step(stmt) != SQLITE_DONE) {
-      throw DatabaseAccessException("Failed to delete row from '" + table + "': " + sqlite3_errmsg(this->db));
+      throw DatabaseAccessException("Failed to delete row from '" + table.toString() + "': " + sqlite3_errmsg(this->db));
     }
     sqlite3_finalize(stmt);
   }
 
-  void Registry::dropEntry(std::string table, int key) {
-    if (!this->db) {
-      throw DatabaseAccessException("Database does not exist.");
-    };
+  void Registry::dropEntry(SqlSafeString table, int key) {
+    this->ensureDatabase();
 
-    std::string pk = this->schemas.at(table)->get(0).first;
-    if (pk.empty()) {
-      throw DatabaseAccessException("No primary key found on table '" + table + "' — cannot delete by string key.");
-    }
+    std::string pk = this->getPrimaryColumn(table);
+    std::string sql = "DELETE FROM \"" + table.toString() + "\" WHERE \"" + pk + "\" = ?;";
 
-    std::string sql = "DELETE FROM \"" + table + "\" WHERE \"" + pk + "\" = ?;";
     sqlite3_stmt* stmt = nullptr;
-    if (sqlite3_prepare_v2(this->db, sql.c_str(), -1, &stmt, nullptr) != SQLITE_OK) {
-      throw DatabaseAccessException("Failed to prepare delete statement for table '" + table + "': " + sqlite3_errmsg(this->db));
-    }
+    this->prepare(sql, &stmt);
 
     sqlite3_bind_int(stmt, 1, key);
     if (sqlite3_step(stmt) != SQLITE_DONE) {
-      throw DatabaseAccessException("Failed to delete row from '" + table + "': " + sqlite3_errmsg(this->db));
+      throw DatabaseAccessException("Failed to delete row from '" + table.toString() + "': " + sqlite3_errmsg(this->db));
     }
     sqlite3_finalize(stmt);
   }
 
-  void Registry::dropEntry(std::string table, double key) {
-    if (!this->db) {
-      throw DatabaseAccessException("Database does not exist.");
-    };
+  void Registry::dropEntry(SqlSafeString table, double key) {
+    this->ensureDatabase();
 
-    std::string pk = this->schemas.at(table)->get(0).first;
-    if (pk.empty()) {
-      throw DatabaseAccessException("No primary key found on table '" + table + "' — cannot delete by string key.");
-    }
+    std::string pk = this->getPrimaryColumn(table);
+    std::string sql = "DELETE FROM \"" + table.toString() + "\" WHERE \"" + pk + "\" = ?;";
 
-    std::string sql = "DELETE FROM \"" + table + "\" WHERE \"" + pk + "\" = ?;";
     sqlite3_stmt* stmt = nullptr;
-    if (sqlite3_prepare_v2(this->db, sql.c_str(), -1, &stmt, nullptr) != SQLITE_OK) {
-      throw DatabaseAccessException("Failed to prepare delete statement for table '" + table + "': " + sqlite3_errmsg(this->db));
-    }
+    this->prepare(sql, &stmt);
 
     sqlite3_bind_double(stmt, 1, key);
     if (sqlite3_step(stmt) != SQLITE_DONE) {
-      throw DatabaseAccessException("Failed to delete row from '" + table + "': " + sqlite3_errmsg(this->db));
+      throw DatabaseAccessException("Failed to delete row from '" + table.toString() + "': " + sqlite3_errmsg(this->db));
     }
     sqlite3_finalize(stmt);
   }
 
-  Row Registry::getEntry(std::string table, std::string key) {
-    return Row(this->db, table, key, this->schemas[table]);
+  Row Registry::getEntry(SqlSafeString table, std::string key) {
+    return Row(this->db, table, key, this->schemas[table.toString()]);
   }
 
-  Row Registry::getEntry(std::string table, int key) {
-    return Row(this->db, table, key, this->schemas[table]);
+  Row Registry::getEntry(SqlSafeString table, int key) {
+    return Row(this->db, table, key, this->schemas[table.toString()]);
   }
 
-  Row Registry::getEntry(std::string table, double key) {
-    return Row(this->db, table, key, this->schemas[table]);
+  Row Registry::getEntry(SqlSafeString table, double key) {
+    return Row(this->db, table, key, this->schemas[table.toString()]);
   }
 
-  bool Registry::hasEntry(std::string table, std::string key) {
-    if (!this->db) {
-      throw DatabaseAccessException("Database does not exist.");
-    }
+  bool Registry::hasEntry(SqlSafeString table, std::string key) {
+    this->ensureDatabase();
 
-    std::string pk = this->schemas.at(table)->get(0).first;
-    if (pk.empty()) {
-      throw DatabaseAccessException("No primary key found on table '" + table + "' — cannot check by string key.");
-    }
+    std::string pk = this->getPrimaryColumn(table);
+    std::string sql = "SELECT 1 FROM \"" + table.toString() + "\" WHERE \"" + pk + "\" = ?;";
 
-    std::string sql = "SELECT 1 FROM \"" + table + "\" WHERE \"" + pk + "\" = ?;";
     sqlite3_stmt* stmt = nullptr;
-    if (sqlite3_prepare_v2(this->db, sql.c_str(), -1, &stmt, nullptr) != SQLITE_OK) {
-      throw DatabaseAccessException("Failed to prepare select statement for table '" + table + "': " + sqlite3_errmsg(this->db));
-    }
+    this->prepare(sql, &stmt);
 
     sqlite3_bind_text(stmt, 1, key.c_str(), -1, SQLITE_TRANSIENT);
     int step = sqlite3_step(stmt);
@@ -178,21 +130,14 @@ namespace iamaprogrammer {
     return step == SQLITE_ROW;
   }
 
-  bool Registry::hasEntry(std::string table, int key) {
-    if (!this->db) {
-      throw DatabaseAccessException("Database does not exist.");
-    }
+  bool Registry::hasEntry(SqlSafeString table, int key) {
+    this->ensureDatabase();
 
-    std::string pk = this->schemas.at(table)->get(0).first;
-    if (pk.empty()) {
-      throw DatabaseAccessException("No primary key found on table '" + table + "' — cannot check by integer key.");
-    }
+    std::string pk = this->getPrimaryColumn(table);
+    std::string sql = "SELECT 1 FROM \"" + table.toString() + "\" WHERE \"" + pk + "\" = ?;";
 
-    std::string sql = "SELECT 1 FROM \"" + table + "\" WHERE \"" + pk + "\" = ?;";
     sqlite3_stmt* stmt = nullptr;
-    if (sqlite3_prepare_v2(this->db, sql.c_str(), -1, &stmt, nullptr) != SQLITE_OK) {
-      throw DatabaseAccessException("Failed to prepare select statement for table '" + table + "': " + sqlite3_errmsg(this->db));
-    }
+    this->prepare(sql, &stmt);
 
     sqlite3_bind_int(stmt, 1, key);
     int step = sqlite3_step(stmt);
@@ -200,21 +145,14 @@ namespace iamaprogrammer {
     return step == SQLITE_ROW;
   }
 
-  bool Registry::hasEntry(std::string table, double key) {
-    if (!this->db) {
-      throw DatabaseAccessException("Database does not exist.");
-    }
+  bool Registry::hasEntry(SqlSafeString table, double key) {
+    this->ensureDatabase();
 
-    std::string pk = this->schemas.at(table)->get(0).first;
-    if (pk.empty()) {
-      throw DatabaseAccessException("No primary key found on table '" + table + "' — cannot check by double key.");
-    }
+    std::string pk = this->getPrimaryColumn(table);
+    std::string sql = "SELECT 1 FROM \"" + table.toString() + "\" WHERE \"" + pk + "\" = ?;";
 
-    std::string sql = "SELECT 1 FROM \"" + table + "\" WHERE \"" + pk + "\" = ?;";
     sqlite3_stmt* stmt = nullptr;
-    if (sqlite3_prepare_v2(this->db, sql.c_str(), -1, &stmt, nullptr) != SQLITE_OK) {
-      throw DatabaseAccessException("Failed to prepare select statement for table '" + table + "': " + sqlite3_errmsg(this->db));
-    }
+    this->prepare(sql, &stmt);
 
     sqlite3_bind_double(stmt, 1, key);
     int step = sqlite3_step(stmt);
@@ -222,4 +160,25 @@ namespace iamaprogrammer {
     return step == SQLITE_ROW;
   }
 
+  // Helper Functions
+
+  void Registry::prepare(const std::string& sql, sqlite3_stmt** stmt) {
+    if (sqlite3_prepare_v2(this->db, sql.c_str(), -1, stmt, nullptr) != SQLITE_OK) {
+      throw DatabaseAccessException("Failed to prepare statement: " + std::string(sqlite3_errmsg(this->db)));
+    }
+  }
+
+  void Registry::ensureDatabase() {
+    if (!this->db) {
+      throw DatabaseAccessException("Database does not exist.");
+    } 
+  }
+
+  std::string Registry::getPrimaryColumn(SqlSafeString table) {
+    const std::string& pk = this->schemas.at(table.toString())->get(0).first;
+    if (pk.empty()) {
+      throw DatabaseAccessException("No primary key found on table '" + table.toString() + "' — cannot check by double key.");
+    }
+    return pk;
+  }
 }
