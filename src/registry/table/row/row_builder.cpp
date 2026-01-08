@@ -18,7 +18,7 @@ namespace iamaprogrammer {
         columns += ", ?"+std::to_string(index+1);
       }
     }
-    std::cout << ("INSERT INTO "+table.toString()+" VALUES ("+columns+");") << std::endl;
+    //std::cout << ("INSERT INTO "+table.toString()+" VALUES ("+columns+");") << std::endl;
     this->checkSQLErr(sqlite3_prepare_v2(this->db, ("INSERT INTO "+table.toString()+" VALUES ("+columns+");").c_str(), -1, &this->statement, nullptr));
   }
 

@@ -10,9 +10,9 @@ namespace iamaprogrammer {
       Value(double value);
       Value();
 
-      std::string asString();
-      int asInteger();
-      double asDouble();
+      std::string asString() const;
+      int asInteger() const;
+      double asDouble() const;
 
     private:
       std::variant<std::string, int, double, nullptr_t> value;

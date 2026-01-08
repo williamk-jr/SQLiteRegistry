@@ -39,5 +39,6 @@ namespace iamaprogrammer {
         columns += ", " + column;
       }
     }
+    return columns;
   }
 }

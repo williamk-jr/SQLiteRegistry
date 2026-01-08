@@ -17,15 +17,15 @@ namespace iamaprogrammer {
 
   }
 
-  std::string Value::asString() {
+  std::string Value::asString() const {
     return std::get<std::string>(this->value);
   }
 
-  int Value::asInteger() {
+  int Value::asInteger() const {
     return std::get<int>(this->value);
   }
 
-  double Value::asDouble() {
+  double Value::asDouble() const {
     return std::get<double>(this->value);
   }
 }
