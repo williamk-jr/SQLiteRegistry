@@ -3,6 +3,10 @@ add_library(${PROJECT_NAME}
   registry/value.cpp
   registry/sql_safe_string.cpp
 
+  registry/filter/filter.cpp
+  registry/filter/filter_expression.cpp
+  registry/filter/filter_compound_expression.cpp
+
   registry/types/registry_type.cpp
   
   registry/exceptions/database_access_exception.cpp

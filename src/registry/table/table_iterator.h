@@ -11,6 +11,7 @@
 #include "../types/registry_type.h"
 #include "../sql_safe_string.h"
 #include "row/row.h"
+#include "../filter/filter.h"
 
 namespace iamaprogrammer {
   class Registry; // Forward Declaration
@@ -31,6 +32,6 @@ namespace iamaprogrammer {
       sqlite3_stmt* statement = nullptr;
       int status = 0;
 
-      TableIterator(sqlite3* db, SqlSafeString table, TableSchema* schema);
+      TableIterator(sqlite3* db, SqlSafeString table, TableSchema* schema, Filter entryFilter, int count);
   };
 }

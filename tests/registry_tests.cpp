@@ -4,6 +4,7 @@
 #include <filesystem>
 
 #include "registry/registry.h"
+#include "registry/filter/filter.h"
 #include "registry/table/table_builder.h"
 
 using namespace iamaprogrammer;
@@ -96,4 +97,88 @@ TEST_CASE("Drop table removes schema") {
   registry.dropTable("tmp");
 
   REQUIRE_THROWS_AS(registry.hasEntry("tmp", std::string("a")), std::out_of_range);
+}
+
+TEST_CASE("Ensure filters are constructed properly") {
+  Filter filter = Filter(
+    FilterExpression::comparison("testCol", FilterComparison::EQUALS, "testCol")
+  );
+
+  REQUIRE(filter.toSql() == "testCol == testCol");
+
+  Filter compoundFilter = Filter(
+    FilterCompoundExpression::logical(
+      FilterExpression::comparison("test", FilterComparison::EQUALS, "test"), 
+      FilterLogical::AND, 
+      FilterExpression::comparison("test", FilterComparison::NOT_EQUALS, "non_test")
+    )
+  );
+
+  REQUIRE(compoundFilter.toSql() == "(test == test AND test != non_test)");
+
+  Filter compoundFilter2 = Filter(
+    FilterCompoundExpression::logical(
+      FilterCompoundExpression::logical(
+        FilterExpression::comparison("test", FilterComparison::EQUALS, "test"),
+        FilterLogical::OR,
+        FilterExpression::comparison("test", FilterComparison::GREATER_THAN, 2)
+      ), 
+      FilterLogical::AND, 
+      FilterExpression::comparison("test", FilterComparison::NOT_EQUALS, "non_test")
+    )
+  );
+
+  REQUIRE(compoundFilter2.toSql() == "((test == test OR test > 2) AND test != non_test)");
+}
+
+TEST_CASE("Table iterator properly iterates table.") {
+  Registry registry(std::filesystem::path(":memory:"));
+  TableSchema schema = TableBuilder()
+    .column("id", RegistryType::integerType())
+    .column("value", RegistryType::integerType())
+    .finish();
+
+  registry.addTable("numbers", &schema);
+  
+  for (int i = 0; i < 10; i++) {
+    registry.addEntry("numbers")
+      .value(i)
+      .value(i*2);
+  }
+
+  TableIterator iterator = registry.getTableIterator("numbers");
+  while (iterator.next()) {
+    Row row = iterator.row();
+    int id = row["id"].asInteger();
+    int value = row["value"].asInteger();
+
+    REQUIRE(value == id*2);
+  }
+}
+
+TEST_CASE("Table iterator properly iterates filtered table.") {
+  Registry registry(std::filesystem::path(":memory:"));
+  TableSchema schema = TableBuilder()
+    .column("id", RegistryType::integerType())
+    .column("value", RegistryType::integerType())
+    .finish();
+
+  registry.addTable("numbers", &schema);
+  
+  for (int i = 0; i < 10; i++) {
+    registry.addEntry("numbers")
+      .value(i)
+      .value(i*2);
+  }
+
+  TableIterator iterator = registry.getTableIterator("numbers", Filter(
+    FilterExpression::comparison("id", FilterComparison::GREATER_THAN, 5)
+  ));
+  
+  while (iterator.next()) {
+    Row row = iterator.row();
+    int id = row["id"].asInteger();
+
+    REQUIRE(id > 5);
+  }
 }

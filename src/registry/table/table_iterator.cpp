@@ -1,8 +1,11 @@
 #include "table_iterator.h"
 
 namespace iamaprogrammer {
-  TableIterator::TableIterator(sqlite3* db, SqlSafeString table, TableSchema* schema): schema(schema) {
-    std::string sql = "SELECT * FROM " + table.toString() + ";";
+  TableIterator::TableIterator(sqlite3* db, SqlSafeString table, TableSchema* schema, Filter entryFilter, int count): schema(schema) {
+    std::string selectionCount = count < 1 ? "*" : std::to_string(count);
+    std::string selectionFilter = entryFilter.isEmpty() ? "" : " WHERE " + entryFilter.toSql();
+
+    std::string sql = "SELECT " + selectionCount + " FROM " + table.toString() + selectionFilter + ";";
     if (sqlite3_prepare_v2(db, sql.c_str(), -1, &this->statement, nullptr) != SQLITE_OK) {
       std::cout << "not fine" << std::endl;
     }

@@ -13,6 +13,7 @@
 #include "table/table_schema.h"
 #include "table/table_iterator.h"
 #include "table/row/row_builder.h"
+#include "filter/filter.h"
 
 #include "exceptions/database_access_exception.h"
 
@@ -26,6 +27,9 @@ namespace iamaprogrammer {
 
     void addTable(SqlSafeString name, TableSchema* schema);
     TableIterator getTableIterator(SqlSafeString name);
+    TableIterator getTableIterator(SqlSafeString name, Filter entryFilter);
+    TableIterator getTableIterator(SqlSafeString name, Filter entryFilter, int count);
+
     void dropTable(SqlSafeString tableName);
 
     RowBuilder addEntry(SqlSafeString table);
@@ -41,6 +45,9 @@ namespace iamaprogrammer {
     bool hasEntry(SqlSafeString table, std::string key);
     bool hasEntry(SqlSafeString table, int key);
     bool hasEntry(SqlSafeString table, double key);
+
+    std::vector<std::string> getTableNames();
+
 
   private:
     sqlite3* db = nullptr;

@@ -32,7 +32,15 @@ namespace iamaprogrammer {
   }
 
   TableIterator Registry::getTableIterator(SqlSafeString table) {
-    return TableIterator(this->db, table, this->schemas[table.toString()]);
+    return this->getTableIterator(table, Filter(), -1);
+  }
+
+  TableIterator Registry::getTableIterator(SqlSafeString table, Filter entryFilter) {
+    return this->getTableIterator(table, entryFilter, -1);
+  }
+
+  TableIterator Registry::getTableIterator(SqlSafeString table, Filter entryFilter, int count) {
+    return TableIterator(this->db, table, this->schemas[table.toString()], entryFilter, count);
   }
 
   void Registry::dropTable(SqlSafeString table) {
@@ -158,6 +166,15 @@ namespace iamaprogrammer {
     int step = sqlite3_step(stmt);
     sqlite3_finalize(stmt);
     return step == SQLITE_ROW;
+  }
+
+  std::vector<std::string> Registry::getTableNames() {
+    std::vector<std::string> keys;
+    for (std::map<std::string, TableSchema*>::iterator iter = this->schemas.begin(); iter != this->schemas.end(); iter++) {
+      keys.push_back(iter->first);
+    }
+
+    return keys;
   }
 
   // Helper Functions
